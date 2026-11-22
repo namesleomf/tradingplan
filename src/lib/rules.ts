@@ -30,6 +30,15 @@ export function applicable(item: Item, d: Day) {
 export function responseKey(item: Item, items: Item[]) {
   return item.ref && items.some((i) => i.id === item.ref) ? item.ref : item.id;
 }
+export function sessionRequirement(item: Item, day: Day) {
+  if (item.mode !== "Unconfigured") return item.mode;
+  const value = day.fields["applicability-" + item.id];
+  return value === "Required" ||
+    value === "Optional" ||
+    value === "Not applicable"
+    ? value
+    : "Unconfigured";
+}
 export type Finding = { status: "Invalid" | "Incomplete"; reason: string };
 export function requirements(
   items: Item[],
@@ -46,11 +55,13 @@ export function requirements(
     )
     .flatMap((i): Finding[] => {
       const response = d.answers[responseKey(i, items)];
-      if (i.mode === "Unconfigured")
+      const mode = sessionRequirement(i, d);
+      if (mode === "Optional" || mode === "Not applicable") return [];
+      if (mode === "Unconfigured")
         return [
           {
             status: "Incomplete",
-            reason: "Classify the requirement: " + i.text,
+            reason: "Review applicability for this session: " + i.text,
           },
         ];
       if (!response || response === "N/A")
@@ -94,7 +105,7 @@ export function guardrails(
   if (week.some((s) => s.fields.weekLock === "yes"))
     fail("Weekly application lockout is active.");
   if (!p) {
-    missing("Import the source plan to configure trading rules.");
+    missing("Trading rules are unspecified in the source.");
     return out;
   }
   if (!p.days.includes(new Date(d.date + "T12:00Z").getUTCDay()))

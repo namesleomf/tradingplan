@@ -1,10 +1,9 @@
 "use client";
-import { useState } from "react";
 import Link from "next/link";
-import { BookOpen, Pencil, Check, ListChecks } from "lucide-react";
+import { BookOpen, ListChecks } from "lucide-react";
 import { pages, entryModels } from "@/data/navigation";
 import { useWorkspace } from "@/lib/workspace";
-import { changeDay, field, write, db } from "@/lib/db";
+import { changeDay, field } from "@/lib/db";
 import { validate } from "@/lib/rules";
 import { Panel, Select, Input } from "./ui/forms";
 import { Checkbox } from "./ui/forms";
@@ -16,7 +15,7 @@ import {
   SessionControls,
   Today,
 } from "./session";
-import { Checklist, Editor } from "./checklist";
+import { Checklist } from "./checklist";
 export function Result() {
   const { pack, items, account, day, week, now } = useWorkspace(),
     r = validate(pack, items, account, day, week, now);
@@ -73,53 +72,13 @@ export function Result() {
     </section>
   );
 }
-function Goals() {
-  const { items } = useWorkspace();
-  return (
-    <div className="stack">
-      {items
-        .filter((i) => i.section === "goals" && !i.heading)
-        .map((i) => {
-          const save = (key: string, value: string) =>
-            write(() => db.items.update(i.id, { [key]: value }));
-          return (
-            <Panel key={i.id} title={i.text}>
-              <div className="grid2">
-                {[
-                  ["target", "Target"],
-                  ["progress", "Manual progress"],
-                  ["description", "Description"],
-                  ["notes", "Notes"],
-                ].map(([k, l]) => (
-                  <Input
-                    key={k}
-                    label={l}
-                    value={i[k as "target"] || ""}
-                    onSave={(v) => save(k, v)}
-                  />
-                ))}
-              </div>
-              <label className="confirm">
-                <Checkbox
-                  checked={i.completed || false}
-                  onChange={(checked) =>
-                    write(() => db.items.update(i.id, { completed: checked }))
-                  }
-                />
-                Goal complete
-              </label>
-            </Panel>
-          );
-        })}
-      {!items.some((i) => i.section === "goals") && (
-        <p className="muted">
-          Add a goal in the plan editor or import your source plan.
-        </p>
-      )}
-    </div>
-  );
-}
-export function SectionBody({ id }: { id: string }) {
+export function SectionBody({
+  id,
+  library = false,
+}: {
+  id: string;
+  library?: boolean;
+}) {
   const { day, account } = useWorkspace();
   const f = day.fields;
   const setup = [
@@ -129,8 +88,27 @@ export function SectionBody({ id }: { id: string }) {
     "entry-confluence",
     "entry-trigger",
   ].includes(id);
+  const sourceChecklist = (
+    <Panel
+      title={
+        id === "entry-trigger"
+          ? "Model-specific triggers"
+          : id === "goals"
+            ? "Trading goals"
+            : "From your trading plan"
+      }
+    >
+      {id === "entry-trigger" && (
+        <p className="muted">
+          The source column is blank. These confirmations come from Entry Model.
+        </p>
+      )}
+      <Checklist section={id} all={library} />
+    </Panel>
+  );
   return (
     <div className="stack">
+      {library && sourceChecklist}
       {id === "workflow-setup" && (
         <Panel title="Workspace">
           <Select
@@ -195,7 +173,7 @@ export function SectionBody({ id }: { id: string }) {
             {account.windowStart || "Unconfigured"} –{" "}
             {account.windowEnd || "Unconfigured"} · New York
           </p>
-          <Link href="/settings">Configure account window</Link>
+          <Link href="/settings">Review the session window</Link>
         </Panel>
       )}
       {id === "lockouts" && (
@@ -236,29 +214,16 @@ export function SectionBody({ id }: { id: string }) {
               onSave={(v) => field(day, "minutesInTrade", v)}
             />
           )}
-          <Link href="/settings">Manage account risk settings</Link>
+          <Link href="/settings">Review the session risk limits</Link>
         </Panel>
       )}
-      {id === "goals" ? (
-        <Goals />
-      ) : (
-        <Panel
-          title={
-            id === "entry-trigger"
-              ? "Model-specific triggers"
-              : "Plan checklist"
-          }
-        >
-          <Checklist section={id} />
-        </Panel>
-      )}
+      {!library && sourceChecklist}
       {setup && <Result />}
     </div>
   );
 }
 export function SectionPage({ id }: { id: string }) {
   const { day } = useWorkspace();
-  const [edit, setEdit] = useState(false);
   const page = pages.find((p) => p.id === id)!;
   if (id === "todays-plan") return <Today />;
   return (
@@ -271,27 +236,19 @@ export function SectionPage({ id }: { id: string }) {
           </div>
           <h1>{page.title}</h1>
         </div>
-        <Button variant="outline" onClick={() => setEdit(!edit)}>
-          {edit ? <Check size={14} /> : <Pencil size={14} />}{" "}
-          {edit ? "Finish editing" : "Edit section"}
-        </Button>
       </div>
-      {edit ? (
-        <Editor section={id} />
-      ) : (
-        <div className="stack">
-          <SectionBody id={id} />
-          <Panel title="Session notes">
-            <Input
-              label="Notes for this section"
-              multiline
-              value={day.fields["note-" + id] || ""}
-              placeholder="Add a note…"
-              onSave={(v) => field(day, "note-" + id, v)}
-            />
-          </Panel>
-        </div>
-      )}
+      <div className="stack">
+        <SectionBody id={id} library />
+        <Panel title="Session notes">
+          <Input
+            label="Notes for this section"
+            multiline
+            value={day.fields["note-" + id] || ""}
+            placeholder="Add a note…"
+            onSave={(v) => field(day, "note-" + id, v)}
+          />
+        </Panel>
+      </div>
     </>
   );
 }

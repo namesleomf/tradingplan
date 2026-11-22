@@ -165,3 +165,22 @@ test("manual, trading day, news and opening restrictions", () => {
   assert(reasons.includes("Trading is closed on this day."));
   assert(reasons.includes("NYSE opening restriction is active."));
 });
+test("daily applicability cannot change the source requirement", () => {
+  const rule: Item = { ...item, mode: "Unconfigured" };
+  const day = newDay(account.id, nyDate(now));
+  day.fields.model = rule.model;
+  day.fields["applicability-" + rule.id] = "Required";
+  assert.equal(
+    requirements([rule], day, [rule.section])[0].status,
+    "Incomplete",
+  );
+  day.answers[rule.id] = "Yes";
+  assert.deepEqual(requirements([rule], day, [rule.section]), []);
+  assert.equal(rule.mode, "Unconfigured");
+  const tomorrow = newDay(day.account, "2026-07-08");
+  tomorrow.fields.model = rule.model;
+  assert.match(
+    requirements([rule], tomorrow, [rule.section])[0].reason,
+    /applicability/,
+  );
+});

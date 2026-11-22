@@ -947,3 +947,15 @@ summary {
   text-decoration: underline;
   text-underline-offset: 3px;
 }
+.source-profile {
+  margin-top: 1rem;
+}
+.source-profile div {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--line);
+}
+.source-profile dd {
+  font-variant-numeric: tabular-nums;
+}

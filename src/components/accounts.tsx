@@ -1,173 +1,62 @@
 "use client";
-import { useState } from "react";
 import { useWorkspace } from "@/lib/workspace";
-import { blankAccount, riskFields, type Account } from "@/lib/schema";
-import { db, pref, write } from "@/lib/db";
-import { Panel, Input, Select } from "./ui/forms";
-import { Button } from "./ui/button";
+import { riskFields } from "@/lib/schema";
+import { Panel, Select, Input } from "./ui/forms";
+import { pref, field } from "@/lib/db";
 export function Accounts() {
-  const { accounts, account: a, day } = useWorkspace();
-  const [name, setName] = useState("");
-  const update = (v: Partial<Account>) =>
-    write(() => db.accounts.update(a.id, v));
-  const protectedRisk = a.locked || day.outcomes.length > 0;
-  function updateRisk(k: string, v: string) {
-    return write(() =>
-      db.transaction("rw", db.accounts, async () => {
-        const current = await db.accounts.get(a.id);
-        if (!current || current.locked) return;
-        const risk = { ...current.risk };
-        if (v) risk[k] = Number(v);
-        else delete risk[k];
-        await db.accounts.update(a.id, { risk });
-      }),
-    );
-  }
+  const { accounts, account, pack, day } = useWorkspace();
+  const original = pack.accounts.find((a) => a.id === account.id) ?? account;
   return (
     <div className="stack">
-      <Panel title="Account profiles">
+      <Panel title="Account profile">
         <Select
           label="Active account"
-          value={a.id}
-          options={accounts.map((x) => [x.id, x.name])}
+          value={account.id}
+          options={accounts.map((a) => [a.id, a.name])}
           onChange={(v) => v && pref({ active: v })}
         />
-        <form
-          className="inline-form"
-          onSubmit={(e) => {
-            e.preventDefault();
-            const id = crypto.randomUUID();
-            void write(() =>
-              db.transaction("rw", db.accounts, db.prefs, async () => {
-                await db.accounts.add({
-                  ...blankAccount,
-                  id,
-                  name: name.trim(),
-                });
-                await db.prefs.update("interface", { active: id });
-              }),
-            );
-            setName("");
-          }}
-        >
-          <label className="field">
-            New account name
-            <input
-              required
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-            />
-          </label>
-          <Button variant="outline" disabled={!name.trim()}>
-            Add account
-          </Button>
-        </form>
+        <dl className="source-profile">
+          {Object.entries(original.risk).map(([key, value]) => (
+            <div key={key}>
+              <dt>{riskFields[key as keyof typeof riskFields] ?? key}</dt>
+              <dd>{value.toLocaleString("en-US")}</dd>
+            </div>
+          ))}
+        </dl>
       </Panel>
-      <Panel title={a.name}>
+      <Panel title="Session risk review">
+        <p className="muted">
+          Record the limits and trading window that apply to this account today.
+        </p>
         <div className="grid2">
-          <Input
-            label="Account name"
-            value={a.name}
-            onSave={(v) => v.trim() && update({ name: v.trim() })}
-          />
-          <Select
-            label="Account type"
-            value={a.kind}
-            options={["Personal", "Futures"]}
-            onChange={(v) =>
-              (v === "Personal" || v === "Futures") && update({ kind: v })
-            }
-          />
-          <Input
-            label="Available instruments (comma-separated)"
-            value={a.instruments}
-            onSave={(instruments) => update({ instruments })}
-          />
-          <Input
-            label="Opening restriction (minutes)"
-            type="number"
-            min={0}
-            disabled={protectedRisk}
-            value={a.openMinutes?.toString() ?? ""}
-            onSave={(v) => update({ openMinutes: v === "" ? null : Number(v) })}
-          />
-          <Input
-            type="time"
-            label="Window start (New York)"
-            value={a.windowStart}
-            disabled={protectedRisk}
-            onSave={(windowStart) => update({ windowStart })}
-          />
-          <Input
-            type="time"
-            label="Window end (New York)"
-            value={a.windowEnd}
-            disabled={protectedRisk}
-            onSave={(windowEnd) => update({ windowEnd })}
-          />
-        </div>
-        <h3>Risk settings</h3>
-        <div className="grid3">
-          {Object.entries(riskFields)
-            .filter(([k]) => a.kind === "Personal" || k !== "deposit")
-            .map(([k, l]) => (
+          {(
+            [
+              ["windowStart", "Window start (New York)", "time"],
+              ["windowEnd", "Window end (New York)", "time"],
+              ["openMinutes", "Opening restriction (minutes)", "number"],
+              ["perTrade", "Maximum risk per trade ($)", "number"],
+            ] as const
+          ).map(([key, label, type]) => {
+            const fixed =
+              key === "perTrade" ? original.risk.perTrade : original[key];
+            const effective =
+              key === "perTrade" ? account.risk.perTrade : account[key];
+            return (
               <Input
-                key={k}
-                label={l}
-                type="number"
-                min={0.01}
-                step={
-                  ["tradeLimit", "losses", "maxTime"].includes(k) ? 1 : 0.01
+                key={key}
+                label={label}
+                type={type}
+                min={key === "openMinutes" ? 0 : 0.01}
+                step={key === "perTrade" ? 0.01 : 1}
+                disabled={
+                  (fixed !== undefined && fixed !== null && fixed !== "") ||
+                  day.outcomes.length > 0
                 }
-                value={a.risk[k]?.toString() ?? ""}
-                placeholder="Unconfigured"
-                disabled={protectedRisk}
-                onSave={(v) => updateRisk(k, v)}
+                value={day.fields["profile-" + key] ?? String(effective ?? "")}
+                onSave={(v) => field(day, "profile-" + key, v)}
               />
-            ))}
-        </div>
-        {a.kind === "Futures" && a.risk.drawdown && a.risk.losses ? (
-          <p className="muted">
-            Drawdown per assumed loss:{" "}
-            {(a.risk.drawdown / a.risk.losses).toLocaleString("en-US", {
-              style: "currency",
-              currency: "USD",
-            })}
-            .
-          </p>
-        ) : null}
-        <div className="actions">
-          <Button
-            variant="outline"
-            disabled={day.outcomes.length > 0}
-            onClick={() => update({ locked: !a.locked })}
-          >
-            {a.locked ? "Unlock configuration" : "Lock configuration"}
-          </Button>
-          <Button
-            variant="ghost"
-            disabled={accounts.length < 2}
-            onClick={() => {
-              if (confirm("Delete this account and its saved sessions?"))
-                void write(() =>
-                  db.transaction(
-                    "rw",
-                    db.accounts,
-                    db.days,
-                    db.prefs,
-                    async () => {
-                      await db.days.where("account").equals(a.id).delete();
-                      await db.accounts.delete(a.id);
-                      await db.prefs.update("interface", {
-                        active: accounts.find((x) => x.id !== a.id)!.id,
-                      });
-                    },
-                  ),
-                );
-            }}
-          >
-            Remove account
-          </Button>
+            );
+          })}
         </div>
       </Panel>
     </div>

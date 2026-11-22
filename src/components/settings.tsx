@@ -1,29 +1,17 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Settings2, Database, Download, Upload } from "lucide-react";
 import { useWorkspace } from "@/lib/workspace";
 import { pages } from "@/data/navigation";
-import {
-  pref,
-  write,
-  restore,
-  exportData,
-  importData,
-  changeDay,
-} from "@/lib/db";
+import { pref, exportData, restoreSessions, changeDay } from "@/lib/db";
 import { Panel, Select } from "./ui/forms";
 import { Checkbox } from "./ui/forms";
 import { Button } from "./ui/button";
-import { Editor } from "./checklist";
 import { Accounts } from "./accounts";
 export function SettingsPage() {
   const { prefs, day, pack } = useWorkspace();
   const [tab, setTab] = useState("Accounts"),
-    [section, setSection] = useState("psychology"),
     [message, setMessage] = useState("");
-  useEffect(() => {
-    if (location.hash === "#import") setTab("Data");
-  }, []);
   return (
     <>
       <div className="page-heading">
@@ -33,28 +21,17 @@ export function SettingsPage() {
             Workspace
           </div>
           <h1>Settings</h1>
-          <p>Manage your accounts, plan content and local data.</p>
+          <p>Review your accounts, session data and navigation preferences.</p>
         </div>
       </div>
       <div className="tabs">
-        {["Accounts", "Plan editor", "Data", "Interface"].map((t) => (
+        {["Accounts", "Data", "Interface"].map((t) => (
           <button key={t} aria-pressed={tab === t} onClick={() => setTab(t)}>
             {t}
           </button>
         ))}
       </div>
       {tab === "Accounts" && <Accounts />}
-      {tab === "Plan editor" && (
-        <div className="stack">
-          <Select
-            label="Plan section"
-            value={section}
-            options={pages.map((p) => [p.id, p.title])}
-            onChange={(v) => v && setSection(v)}
-          />
-          <Editor section={section} />
-        </div>
-      )}
       {tab === "Interface" && (
         <Panel title="Navigation preferences">
           <Select
@@ -74,8 +51,7 @@ export function SettingsPage() {
       )}
       {tab === "Data" && (
         <div className="stack">
-          <Panel title="Plan data" icon={<Database />}>
-            <p>{pack.label || "No source plan imported."}</p>
+          <Panel title="Session backup" icon={<Database />}>
             <div className="actions">
               <Button
                 variant="outline"
@@ -101,27 +77,27 @@ export function SettingsPage() {
               </Button>
               <label className="button outline file-button">
                 <Upload size={14} />
-                Import plan or backup
+                Restore session backup
                 <input
                   type="file"
                   accept=".json,application/json"
-                  aria-label="Import plan or backup"
+                  aria-label="Restore session backup"
                   onChange={async (e) => {
                     const f = e.target.files?.[0];
                     e.target.value = "";
                     if (!f) return;
                     if (
                       !confirm(
-                        "Replace local plan data, accounts and sessions with this file?",
+                        "Replace saved sessions and preferences with this backup?",
                       )
                     )
                       return;
                     try {
-                      await importData(JSON.parse(await f.text()));
-                      setMessage("Import complete.");
+                      await restoreSessions(JSON.parse(await f.text()));
+                      setMessage("Sessions restored.");
                     } catch (err) {
                       setMessage(
-                        "Import failed. " +
+                        "Restore failed. " +
                           (err instanceof Error
                             ? err.message
                             : "Invalid file."),
@@ -167,18 +143,8 @@ export function SettingsPage() {
               </details>
             )}
           </Panel>
-          <Panel title="Restore and reset">
+          <Panel title="Daily checklist">
             <div className="actions">
-              <Button
-                variant="outline"
-                onClick={() =>
-                  confirm(
-                    "Restore plan text and requirements from the imported original and clear checklist answers?",
-                  ) && write(restore)
-                }
-              >
-                Restore original plan
-              </Button>
               <Button
                 variant="outline"
                 onClick={() =>
@@ -187,6 +153,9 @@ export function SettingsPage() {
                   ) &&
                   changeDay(day, (s) => {
                     s.answers = {};
+                    for (const key of Object.keys(s.fields))
+                      if (key.startsWith("applicability-"))
+                        delete s.fields[key];
                     s.step = 0;
                     for (const k of [
                       "calendar",

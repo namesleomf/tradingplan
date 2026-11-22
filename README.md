@@ -1,6 +1,10 @@
 # Trading Plan
 
-A local-first trading workbook built with Next.js App Router, React, TypeScript, Tailwind, shadcn-style components, Lucide, Zustand and Dexie. It opens on Today’s Plan and groups 25 editable sections into seven navigation groups.
+The app opens to Today’s Plan with the complete read-only workbook from Trading.pdf. Its 25 sections retain the original order within each navigation group. The plan library shows every entry, including models and workspace setups outside the active session. The guided workflow filters checklists to the current selection.
+
+The source ships in the release. This edition uses an encrypted workbook and a private access link. Open the full link on a new browser. The browser unlocks the bundled plan locally and remembers access on that origin. Source text, hierarchy and rules have no editing or replacement controls. Anyone with the private link can read the plan.
+
+Daily answers, notes, account selection, risk review and session lockouts persist locally in IndexedDB. Settings can export and restore session backups. Older backups restore session data while the bundled source remains authoritative. The source coverage report is available under Settings → Data.
 
 ## Run locally
 
@@ -11,21 +15,9 @@ npm ci
 npm run dev
 ```
 
-Open http://localhost:3000. For a production build, run `npm run build` followed by `npm start`. Vercel can deploy the repository using its Next.js preset.
+Use the same private link fragment on localhost. The downloadable personal edition bundles the source directly and opens without a private link. For a production build run `npm run build` and `npm start`.
 
-## Load your plan
-
-In Settings → Data, choose **Import plan or backup** and select the supplied source JSON. Import replaces the workspace on that browser and origin. The original imported snapshot powers Restore original plan. The public project starts with an empty library. A private build can preload a source JSON by replacing `src/data/initial.json` before building. A preloaded file becomes part of the client bundle.
-
-The source mapping is in Settings → Data. Entries with ambiguous applicability stay unconfigured until classified in the plan editor. Configure each account’s trading window, opening restriction and risk limits in Settings. Daily plan figures from the source remain available under Original daily plan.
-
-## Daily use
-
-Select the active account, complete Today’s Plan, and open Guided Workflow. Answers are shared with the corresponding plan pages. Entry triggers reference the original entry-model requirement IDs. The source’s account-specific or conflicting values are available for review before configuration. Validation gives a reason for each invalid or incomplete condition.
-
-Plan definitions, original source, accounts, preferences and account/day sessions occupy separate IndexedDB tables. Trading dates and trading restrictions use America/New_York. Manual outcome recording calculates local risk restrictions. Lockouts apply within this app. Export a JSON backup before clearing browser storage, changing browser or moving to another URL.
-
-## Verification
+## Verify
 
 ```sh
 npm test

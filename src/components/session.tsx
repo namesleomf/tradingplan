@@ -247,7 +247,7 @@ export function SessionControls() {
   );
 }
 export function Today() {
-  const { day, pack, account, now } = useWorkspace();
+  const { day, account, now } = useWorkspace();
   const confirms = [
     ["prepared", "Session preparation complete"],
     ["riskReviewed", "Account risk limits reviewed"],
@@ -278,17 +278,11 @@ export function Today() {
           </Link>
         </Button>
       </div>
-      {!pack.label && (
-        <div className="import-line">
-          <BookOpen size={16} />
-          <span>Load your trading plan to use its checklists and rules.</span>
-          <Link href="/settings#import">
-            Import plan <ChevronRight size={14} />
-          </Link>
-        </div>
-      )}
       <div className="today-grid">
         <div className="stack">
+          <Panel icon={<BookOpen />} title="From your trading plan">
+            <Checklist section="todays-plan" all />
+          </Panel>
           <Panel icon={<SlidersHorizontal />} title="Session plan">
             <ContextFields />
           </Panel>
@@ -304,14 +298,7 @@ export function Today() {
               onSave={(v) => field(day, "notes", v)}
             />
           </Panel>
-          <details className="fold">
-            <summary>
-              <BookOpen size={16} />
-              Original daily plan
-              <ChevronRight size={15} />
-            </summary>
-            <Checklist section="todays-plan" />
-          </details>
+
           <details className="fold">
             <summary>
               <ListChecks size={16} />
