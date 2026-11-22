@@ -34,7 +34,7 @@ export function Checklist({
       );
   }
   return (
-    <div className="checklist">
+    <div className={all ? "checklist checklist-cards" : "checklist"}>
       {nodes.length ? (
         tree("")
       ) : (

@@ -959,3 +959,61 @@ summary {
 .source-profile dd {
   font-variant-numeric: tabular-nums;
 }
+.checklist-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr));
+  gap: 8px;
+  align-items: start;
+}
+.checklist-cards > .tree,
+.checklist-cards > .item-row,
+.checklist-cards .tree > .tree {
+  background: #fafafa;
+  border: 1px solid #d9d9d9;
+  border-radius: 7px;
+  padding: 10px 11px;
+  min-width: 0;
+}
+.checklist-cards .tree[open] > summary {
+  margin-bottom: 6px;
+}
+.checklist-cards > .tree:has(.tree) {
+  grid-column: 1/-1;
+}
+.checklist-cards .tree > div:has(> .tree) {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 205px), 1fr));
+  gap: 7px;
+  align-items: start;
+  border: 0;
+  margin: 0;
+  padding: 0;
+}
+.checklist-cards .tree > div > .tree {
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  background: white;
+  padding: 7px 9px;
+}
+.checklist-cards .tree > div > .tree:has(.tree) {
+  grid-column: 1/-1;
+}
+.checklist-cards .item-row {
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.checklist-cards .item-label {
+  flex: 1 1 145px;
+  font-size: 13px;
+  gap: 7px;
+}
+.checklist-cards .item-status {
+  font-size: 11px;
+}
+.checklist-cards > .item-row {
+  align-self: stretch;
+  align-content: center;
+}
+.checklist-cards p {
+  grid-column: 1/-1;
+}

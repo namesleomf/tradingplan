@@ -39,7 +39,7 @@ const icons = [
 ];
 export function Shell({ children }: { children: React.ReactNode }) {
   const path = usePathname(),
-    { prefs, accounts, account, now } = useWorkspace(),
+    { prefs, accounts, account, now, overview } = useWorkspace(),
     page = pages.find((p) => p.url === path);
   const side = useRef<HTMLElement>(null);
   const [drawer, setDrawer] = useState(false);
@@ -129,6 +129,16 @@ export function Shell({ children }: { children: React.ReactNode }) {
           }}
         >
           <div className="nav-caption">Workspace</div>
+          {overview && (
+            <a
+              className="nav-line quick"
+              href={overview}
+              title="Full trading plan"
+            >
+              <BookOpen />
+              <span>Full trading plan</span>
+            </a>
+          )}
           <Link
             className={"nav-line quick " + (path === today ? "active" : "")}
             aria-current={path === today ? "page" : undefined}

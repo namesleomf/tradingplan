@@ -44,8 +44,11 @@ export async function initialize(pack: Pack) {
   await db.transaction("rw", db.accounts, db.prefs, async () => {
     const profiles = new Set(await db.accounts.toCollection().primaryKeys());
     await db.accounts.bulkPut(pack.accounts.filter((a) => !profiles.has(a.id)));
-    if (!(await db.prefs.get("interface")))
+    const prefs = await db.prefs.get("interface");
+    if (!prefs)
       await db.prefs.put({ ...defaultPrefs, active: pack.accounts[0].id });
+    else if (!(await db.accounts.get(prefs.active)))
+      await db.prefs.update("interface", { active: pack.accounts[0].id });
   });
 }
 export const useSave = create<{
